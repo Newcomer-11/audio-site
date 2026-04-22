@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Quản lý nhạc</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f5f2ee; --surface: #fff; --border: #e8e3dc;
+      --text: #1a1714; --muted: #8a8178; --accent: #c4824a;
+      --accent-light: #f0e8df; --danger: #dc2626; --success: #16a34a;
+      --radius: 12px;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    header {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 22px 32px; position: sticky; top: 0; z-index: 10;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    header h1 { font-family: 'DM Serif Display', serif; font-size: 1.4rem; }
+    header .actions { display: flex; gap: 10px; align-items: center; }
+    .btn {
+      padding: 8px 16px; border-radius: 8px; font-family: inherit;
+      font-size: .82rem; font-weight: 500; cursor: pointer; border: 1.5px solid transparent;
+      transition: all .15s; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-ghost { background: transparent; border-color: var(--border); color: var(--muted); }
+    .btn-ghost:hover { border-color: var(--text); color: var(--text); }
+    .btn-danger { background: transparent; border-color: #fecaca; color: var(--danger); }
+    .btn-danger:hover { background: #fef2f2; }
+
+    .container { max-width: 860px; margin: 0 auto; padding: 32px 20px; }
+
+    /* Upload zone */
+    .upload-card {
+      background: var(--surface); border: 2px dashed var(--border);
+      border-radius: var(--radius); padding: 40px 28px; text-align: center;
+      margin-bottom: 32px; transition: border-color .2s, background .2s;
+      cursor: pointer;
+    }
+    .upload-card.drag-over { border-color: var(--accent); background: var(--accent-light); }
+    .upload-card .icon { font-size: 2.2rem; margin-bottom: 10px; }
+    .upload-card h2 { font-family: 'DM Serif Display', serif; font-size: 1.15rem; margin-bottom: 6px; }
+    .upload-card p { color: var(--muted); font-size: .84rem; margin-bottom: 18px; }
+    .upload-card .hint { font-size: .75rem; color: var(--muted); margin-top: 10px; }
+    #file-input { display: none; }
+    .btn-upload {
+      padding: 10px 22px; background: var(--text); color: #f5f2ee;
+      border: none; border-radius: 8px; font-family: inherit;
+      font-size: .88rem; font-weight: 500; cursor: pointer; transition: opacity .15s;
+    }
+    .btn-upload:hover { opacity: .85; }
+
+    /* Progress */
+    .progress-wrap { margin-top: 14px; display: none; }
+    .progress-wrap.show { display: block; }
+    .progress-bar-bg {
+      height: 5px; background: var(--border); border-radius: 99px; overflow: hidden;
+    }
+    .progress-bar { height: 100%; background: var(--accent); border-radius: 99px; width: 0%; transition: width .2s; }
+    .progress-label { font-size: .78rem; color: var(--muted); margin-top: 6px; }
+
+    /* Toast */
+    #toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: var(--text); color: #f5f2ee;
+      padding: 12px 22px; border-radius: 99px; font-size: .85rem;
+      opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; z-index: 999;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #toast.success { background: var(--success); }
+    #toast.error { background: var(--danger); }
+
+    /* Track list */
+    .section-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 14px; }
+    .track-item {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 18px;
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 8px; transition: border-color .15s;
+    }
+    .track-item:hover { border-color: #d0c9c0; }
+    .track-icon { font-size: 1.1rem; width: 36px; text-align: center; flex-shrink: 0; }
+    .track-info { flex: 1; min-width: 0; }
+    .track-info .name { font-size: .9rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .track-info .meta { font-size: .76rem; color: var(--muted); margin-top: 2px; }
+    .del-btn {
+      background: transparent; border: 1px solid var(--border); color: var(--muted);
+      width: 32px; height: 32px; border-radius: 8px; cursor: pointer;
+      font-size: .8rem; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      transition: all .15s;
+    }
+    .del-btn:hover { background: #fef2f2; border-color: #fecaca; color: var(--danger); }
+
+    .empty { text-align: center; padding: 48px 0; color: var(--muted); font-size: .88rem; }
+    .loading { text-align: center; padding: 40px; color: var(--muted); }
+    .spinner { width: 24px; height: 24px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 10px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>⚙️ Quản lý nhạc</h1>
+  <div class="actions">
+    <a href="/" class="btn btn-ghost" target="_blank">👁 Xem trang</a>
+    <button class="btn btn-danger" onclick="logout()">Đăng xuất</button>
+  </div>
+</header>
+
+<div class="container">
+  <!-- Upload zone -->
+  <div class="upload-card" id="drop-zone">
+    <input type="file" id="file-input" accept="audio/*" multiple>
+    <div class="icon">☁️</div>
+    <h2>Upload file nhạc</h2>
+    <p>Kéo thả file vào đây, hoặc nhấn chọn file</p>
+    <button class="btn-upload" onclick="document.getElementById('file-input').click()">Chọn file</button>
+    <p class="hint">Hỗ trợ: MP3, WAV, OGG, FLAC, AAC, M4A • Tối đa 100MB/file</p>
+    <div class="progress-wrap" id="progress-wrap">
+      <div class="progress-bar-bg"><div class="progress-bar" id="progress-bar"></div></div>
+      <div class="progress-label" id="progress-label">Đang upload...</div>
+    </div>
+  </div>
+
+  <!-- Track list -->
+  <p class="section-label">Bài hát đã tải lên <span id="count"></span></p>
+  <div id="list"><div class="loading"><div class="spinner"></div><p>Đang tải...</p></div></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  let tracks = [];
+
+  async function loadTracks() {
+    const res = await fetch('/api/tracks');
+    const data = await res.json();
+    tracks = data.tracks || [];
+    renderList();
+  }
+
+  function fmtSize(b) {
+    if (b > 1048576) return (b/1048576).toFixed(1) + ' MB';
+    return (b/1024).toFixed(0) + ' KB';
+  }
+  function fmtDate(d) {
+    return new Date(d).toLocaleDateString('vi-VN', { day:'2-digit', month:'2-digit', year:'numeric' });
+  }
+  function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function renderList() {
+    const el = document.getElementById('list');
+    document.getElementById('count').textContent = tracks.length ? `(${tracks.length})` : '';
+    if (!tracks.length) {
+      el.innerHTML = '<div class="empty">Chưa có bài hát nào</div>';
+      return;
+    }
+    el.innerHTML = tracks.map((t, i) => `
+      <div class="track-item" id="ti-${i}">
+        <div class="track-icon">🎵</div>
+        <div class="track-info">
+          <div class="name">${esc(t.displayName)}</div>
+          <div class="meta">${fmtSize(t.size)} · Upload ${fmtDate(t.uploadedAt)}</div>
+        </div>
+        <button class="del-btn" onclick="deleteTrack(${i})" title="Xóa">🗑</button>
+      </div>`).join('');
+  }
+
+  async function deleteTrack(idx) {
+    const t = tracks[idx];
+    if (!confirm(`Xóa "${t.displayName}"?`)) return;
+    const res = await fetch(`/admin/tracks/${encodeURIComponent(t.filename)}`, { method: 'DELETE' });
+    if (res.ok) { toast('Đã xóa!', 'success'); loadTracks(); }
+    else toast('Xóa thất bại', 'error');
+  }
+
+  async function uploadFile(file) {
+    const pw = document.getElementById('progress-wrap');
+    const pb = document.getElementById('progress-bar');
+    const pl = document.getElementById('progress-label');
+    pw.classList.add('show');
+    pb.style.width = '0%';
+    pl.textContent = `Đang upload: ${file.name}`;
+
+    return new Promise((resolve) => {
+      const fd = new FormData();
+      fd.append('audio', file);
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/admin/upload');
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const pct = Math.round(e.loaded / e.total * 100);
+          pb.style.width = pct + '%';
+          pl.textContent = `Đang upload: ${file.name} (${pct}%)`;
+        }
+      };
+      xhr.onload = () => {
+        const data = JSON.parse(xhr.responseText);
+        if (xhr.status === 200) resolve({ ok: true, name: file.name });
+        else resolve({ ok: false, name: file.name, err: data.error });
+      };
+      xhr.onerror = () => resolve({ ok: false, name: file.name, err: 'Network error' });
+      xhr.send(fd);
+    });
+  }
+
+  async function handleFiles(files) {
+    let ok = 0, fail = 0;
+    for (const f of files) {
+      const r = await uploadFile(f);
+      r.ok ? ok++ : fail++;
+    }
+    document.getElementById('progress-wrap').classList.remove('show');
+    document.getElementById('progress-bar').style.width = '0%';
+    if (ok) toast(`✓ Upload thành công ${ok} file`, 'success');
+    if (fail) toast(`✗ ${fail} file thất bại`, 'error');
+    loadTracks();
+  }
+
+  // File input
+  document.getElementById('file-input').addEventListener('change', (e) => {
+    handleFiles([...e.target.files]);
+    e.target.value = '';
+  });
+
+  // Drag & drop
+  const dz = document.getElementById('drop-zone');
+  dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('drag-over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', (e) => {
+    e.preventDefault(); dz.classList.remove('drag-over');
+    handleFiles([...e.dataTransfer.files]);
+  });
+
+  // Toast
+  let toastTimer;
+  function toast(msg, type = '') {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'show ' + type;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.className = ''; }, 3000);
+  }
+
+  async function logout() {
+    await fetch('/admin/logout', { method: 'POST' });
+    window.location.href = '/admin/login';
+  }
+
+  loadTracks();
+</script>
+</body>
+</html>

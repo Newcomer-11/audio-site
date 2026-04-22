@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nghe Nhạc</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f5f2ee;
+      --surface: #ffffff;
+      --border: #e8e3dc;
+      --text: #1a1714;
+      --muted: #8a8178;
+      --accent: #c4824a;
+      --accent-light: #f0e8df;
+      --active-bg: #1a1714;
+      --active-text: #f5f2ee;
+      --radius: 12px;
+      --shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.06);
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      padding: 28px 32px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      position: sticky; top: 0; z-index: 10;
+    }
+    header h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.6rem;
+      letter-spacing: -0.02em;
+    }
+    header p { color: var(--muted); font-size: .85rem; margin-top: 2px; }
+
+    /* ── Layout ── */
+    .container { max-width: 860px; margin: 0 auto; width: 100%; padding: 0 20px; }
+
+    /* ── Player bar (sticky bottom) ── */
+    #player-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--active-bg); color: var(--active-text);
+      padding: 14px 24px;
+      display: none;
+      align-items: center;
+      gap: 16px;
+      z-index: 100;
+      box-shadow: 0 -4px 24px rgba(0,0,0,.18);
+    }
+    #player-bar.visible { display: flex; }
+
+    #player-bar .now-playing { flex: 1; min-width: 0; }
+    #player-bar .now-playing .label { font-size: .7rem; opacity: .5; text-transform: uppercase; letter-spacing: .08em; }
+    #player-bar .now-playing .title { font-size: .9rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .play-btn {
+      width: 40px; height: 40px; border-radius: 50%;
+      border: none; background: var(--accent); color: white;
+      font-size: 1rem; cursor: pointer; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform .15s, opacity .15s;
+    }
+    .play-btn:hover { transform: scale(1.08); }
+    .play-btn:active { transform: scale(.96); }
+
+    /* Progress */
+    .progress-wrap { flex: 2; display: flex; align-items: center; gap: 10px; }
+    .time { font-size: .75rem; opacity: .55; min-width: 36px; }
+    .time.right { text-align: right; }
+    input[type=range] {
+      flex: 1; height: 3px; cursor: pointer;
+      -webkit-appearance: none; background: rgba(255,255,255,.25);
+      border-radius: 99px; outline: none;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 13px; height: 13px;
+      background: var(--accent); border-radius: 50%;
+    }
+
+    /* Volume */
+    .vol-wrap { display: flex; align-items: center; gap: 8px; opacity: .7; }
+    .vol-wrap input { width: 70px; }
+    .vol-icon { font-size: .95rem; }
+
+    /* ── Track list ── */
+    .track-list { padding: 28px 0 120px; }
+    .section-label {
+      font-size: .72rem; text-transform: uppercase; letter-spacing: .1em;
+      color: var(--muted); margin-bottom: 14px;
+    }
+
+    .track-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      display: flex; align-items: center; gap: 14px;
+      cursor: pointer;
+      margin-bottom: 8px;
+      transition: border-color .15s, box-shadow .15s, transform .12s;
+    }
+    .track-item:hover { border-color: var(--accent); box-shadow: var(--shadow); transform: translateY(-1px); }
+    .track-item.active { background: var(--accent-light); border-color: var(--accent); }
+
+    .track-num { font-size: .8rem; color: var(--muted); min-width: 24px; text-align: right; }
+    .track-item.active .track-num { color: var(--accent); }
+
+    .track-icon {
+      width: 40px; height: 40px; border-radius: 8px;
+      background: var(--accent-light); display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; flex-shrink: 0;
+    }
+    .track-item.active .track-icon { background: var(--accent); }
+
+    .track-info { flex: 1; min-width: 0; }
+    .track-info .name { font-size: .95rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .track-info .meta { font-size: .78rem; color: var(--muted); margin-top: 2px; }
+
+    .track-play-btn {
+      width: 34px; height: 34px; border-radius: 50%;
+      border: 1.5px solid var(--border); background: transparent;
+      color: var(--text); cursor: pointer; font-size: .85rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .15s; flex-shrink: 0;
+    }
+    .track-item:hover .track-play-btn, .track-item.active .track-play-btn {
+      background: var(--accent); border-color: var(--accent); color: white;
+    }
+
+    /* Empty state */
+    .empty {
+      text-align: center; padding: 80px 20px;
+      color: var(--muted);
+    }
+    .empty .emoji { font-size: 2.5rem; margin-bottom: 12px; }
+    .empty p { font-size: .9rem; }
+
+    /* Loading */
+    .loading { text-align: center; padding: 60px; color: var(--muted); }
+    .spinner {
+      width: 28px; height: 28px; border: 2.5px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin .7s linear infinite; margin: 0 auto 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 580px) {
+      header { padding: 20px 16px 16px; }
+      .container { padding: 0 14px; }
+      .progress-wrap { display: none; }
+      .vol-wrap { display: none; }
+      #player-bar { padding: 14px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="container" style="display:flex;align-items:center;justify-content:space-between;">
+    <div>
+      <h1>🎵 Thư viện nhạc</h1>
+      <p id="track-count">Đang tải...</p>
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <div class="track-list">
+    <p class="section-label">Tất cả bài hát</p>
+    <div id="list">
+      <div class="loading"><div class="spinner"></div><p>Đang tải danh sách...</p></div>
+    </div>
+  </div>
+</main>
+
+<!-- Sticky player bar -->
+<div id="player-bar">
+  <button class="play-btn" id="main-play-btn" onclick="togglePlay()">▶</button>
+  <div class="now-playing">
+    <div class="label">Đang phát</div>
+    <div class="title" id="now-title">—</div>
+  </div>
+  <div class="progress-wrap">
+    <span class="time" id="time-cur">0:00</span>
+    <input type="range" id="seek-bar" value="0" min="0" max="100" step="0.1" oninput="seek(this.value)">
+    <span class="time right" id="time-dur">0:00</span>
+  </div>
+  <div class="vol-wrap">
+    <span class="vol-icon">🔊</span>
+    <input type="range" id="vol-bar" value="100" min="0" max="100" oninput="setVolume(this.value)">
+  </div>
+</div>
+
+<audio id="audio-el"></audio>
+
+<script>
+  const audio = document.getElementById('audio-el');
+  const playerBar = document.getElementById('player-bar');
+  const mainPlayBtn = document.getElementById('main-play-btn');
+  const nowTitle = document.getElementById('now-title');
+  const seekBar = document.getElementById('seek-bar');
+  const timeCur = document.getElementById('time-cur');
+  const timeDur = document.getElementById('time-dur');
+  let tracks = [], currentIdx = -1;
+
+  function fmt(s) {
+    if (!s || isNaN(s)) return '0:00';
+    const m = Math.floor(s / 60), sec = Math.floor(s % 60);
+    return `${m}:${sec.toString().padStart(2,'0')}`;
+  }
+  function fmtSize(b) {
+    if (b > 1048576) return (b/1048576).toFixed(1) + ' MB';
+    return (b/1024).toFixed(0) + ' KB';
+  }
+
+  async function loadTracks() {
+    const res = await fetch('/api/tracks');
+    const data = await res.json();
+    tracks = data.tracks || [];
+    renderList();
+  }
+
+  function renderList() {
+    const el = document.getElementById('list');
+    document.getElementById('track-count').textContent =
+      tracks.length ? `${tracks.length} bài hát` : 'Chưa có bài hát nào';
+
+    if (!tracks.length) {
+      el.innerHTML = `<div class="empty"><div class="emoji">🎼</div><p>Chưa có bài hát nào được tải lên.</p></div>`;
+      return;
+    }
+
+    el.innerHTML = tracks.map((t, i) => `
+      <div class="track-item${i === currentIdx ? ' active' : ''}" id="track-${i}" onclick="playTrack(${i})">
+        <span class="track-num">${i+1}</span>
+        <div class="track-icon">${i === currentIdx ? '♪' : '🎵'}</div>
+        <div class="track-info">
+          <div class="name">${esc(t.displayName)}</div>
+          <div class="meta">${fmtSize(t.size)}</div>
+        </div>
+        <button class="track-play-btn">${i === currentIdx && !audio.paused ? '⏸' : '▶'}</button>
+      </div>`).join('');
+  }
+
+  function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function playTrack(idx) {
+    if (idx < 0 || idx >= tracks.length) return;
+    const same = idx === currentIdx;
+    currentIdx = idx;
+    if (!same) {
+      audio.src = tracks[idx].url;
+      audio.play();
+    } else {
+      audio.paused ? audio.play() : audio.pause();
+    }
+    nowTitle.textContent = tracks[idx].displayName;
+    playerBar.classList.add('visible');
+    renderList();
+  }
+
+  function togglePlay() {
+    if (currentIdx < 0 && tracks.length) playTrack(0);
+    else audio.paused ? audio.play() : audio.pause();
+  }
+
+  function seek(v) { if (audio.duration) audio.currentTime = audio.duration * v / 100; }
+  function setVolume(v) { audio.volume = v / 100; }
+
+  audio.addEventListener('timeupdate', () => {
+    if (audio.duration) {
+      seekBar.value = (audio.currentTime / audio.duration) * 100;
+      timeCur.textContent = fmt(audio.currentTime);
+    }
+  });
+  audio.addEventListener('loadedmetadata', () => { timeDur.textContent = fmt(audio.duration); });
+  audio.addEventListener('play', () => { mainPlayBtn.textContent = '⏸'; renderList(); });
+  audio.addEventListener('pause', () => { mainPlayBtn.textContent = '▶'; renderList(); });
+  audio.addEventListener('ended', () => { playTrack(currentIdx + 1); });
+
+  loadTracks();
+</script>
+</body>
+</html>

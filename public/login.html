@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin — Đăng nhập</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f5f2ee; --surface: #fff; --border: #e8e3dc;
+      --text: #1a1714; --muted: #8a8178; --accent: #c4824a;
+    }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; padding: 40px 36px;
+      width: 100%; max-width: 380px;
+      box-shadow: 0 4px 24px rgba(0,0,0,.07);
+    }
+    h1 { font-family: 'DM Serif Display', serif; font-size: 1.6rem; margin-bottom: 6px; }
+    .sub { color: var(--muted); font-size: .85rem; margin-bottom: 28px; }
+    label { display: block; font-size: .8rem; font-weight: 500; margin-bottom: 6px; }
+    input[type=password] {
+      width: 100%; padding: 11px 14px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      font-family: inherit; font-size: .95rem; background: var(--bg);
+      outline: none; transition: border-color .15s;
+    }
+    input[type=password]:focus { border-color: var(--accent); }
+    button[type=submit] {
+      width: 100%; margin-top: 16px; padding: 12px;
+      background: var(--text); color: #f5f2ee;
+      border: none; border-radius: 8px; font-family: inherit;
+      font-size: .95rem; font-weight: 500; cursor: pointer;
+      transition: opacity .15s;
+    }
+    button[type=submit]:hover { opacity: .85; }
+    .err {
+      background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c;
+      border-radius: 8px; padding: 10px 14px; font-size: .85rem;
+      margin-top: 12px; display: none;
+    }
+    .err.show { display: block; }
+    .back { text-align: center; margin-top: 20px; }
+    .back a { font-size: .82rem; color: var(--muted); text-decoration: none; }
+    .back a:hover { color: var(--accent); }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>🔐 Admin</h1>
+  <p class="sub">Nhập mật khẩu để tiếp tục</p>
+  <form id="login-form">
+    <label for="pw">Mật khẩu</label>
+    <input type="password" id="pw" name="password" placeholder="••••••••" autofocus required />
+    <button type="submit">Đăng nhập</button>
+    <div class="err" id="err-msg">Sai mật khẩu, thử lại!</div>
+  </form>
+  <div class="back"><a href="/">← Về trang nghe nhạc</a></div>
+</div>
+<script>
+  document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const pw = document.getElementById('pw').value;
+    const res = await fetch('/admin/login', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ password: pw })
+    });
+    if (res.ok) window.location.href = '/admin';
+    else {
+      document.getElementById('err-msg').classList.add('show');
+      document.getElementById('pw').value = '';
+      document.getElementById('pw').focus();
+    }
+  });
+</script>
+</body>
+</html>
